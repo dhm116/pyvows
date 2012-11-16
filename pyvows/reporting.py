@@ -41,7 +41,7 @@ class VowsDefaultReporter(object):
     HONORED = '{0}✓{1}'.format(Fore.GREEN + Style.BRIGHT, Fore.RESET + Style.RESET_ALL)
     BROKEN  = '{0}✗{1}'.format(Fore.RED + Style.BRIGHT, Fore.RESET + Style.RESET_ALL)
     TAB     = '  '
-    
+
     def __init__(self, result, verbosity):
         self.verbosity = verbosity
         self.result    = result
@@ -60,7 +60,7 @@ class VowsDefaultReporter(object):
             return msg
 
         return indentation.join(map(indent, traceback_list))
-        
+
     def get_uncovered_lines(self, uncovered_lines, number_of=3):
         if len(uncovered_lines) > number_of:
             template_str = []
@@ -74,7 +74,7 @@ class VowsDefaultReporter(object):
             return ''.join(template_str)
 
         return ', '.join(uncovered_lines)
-    
+
     #-------------------------------------------------------------------------
     #   Printing Methods
     #-------------------------------------------------------------------------
@@ -85,7 +85,7 @@ class VowsDefaultReporter(object):
     @classmethod
     def handle_error(cls, vow):
         sys.stdout.write(cls.broken)
-    
+
     #-------------------------------------------------------------------------
     #   Printing Methods
     #-------------------------------------------------------------------------
@@ -118,10 +118,10 @@ class VowsDefaultReporter(object):
     def humanized_print(self, msg, indentation=None):
         msg = self.under_split(msg)
         msg = self.camel_split(msg)
-        msg = msg.replace('  ',' ') # normalize spaces if inserted by 
+        msg = msg.replace('  ',' ') # normalize spaces if inserted by
                                     # both of the above
         self.indent_print(msg, indentation)
-    
+
     def print_traceback(self, exc_type, exc_value, exc_traceback, indentation):
         if isinstance(exc_value, VowsAssertionError):
             exc_values_args = tuple(map(lambda arg: '{0.RESET}{1}{0.RED}'.format(Fore, arg), exc_value.args))
@@ -183,7 +183,7 @@ class VowsDefaultReporter(object):
                 honored, topic, name = map(
                     ensure_encoded,
                     (VowsDefaultReporter.HONORED, test['topic'], test['name']))
-                
+
                 if self.verbosity == V_VERBOSE:
                     self.humanized_print('{0} {1}'.format(honored, name))
                 elif self.verbosity >= V_EXTRA_VERBOSE:
@@ -208,7 +208,7 @@ class VowsDefaultReporter(object):
                     ))
                     self.humanized_print('\n\n')
 
-                if hasattr(test['topic'], 'error'):
+                if hasattr(test['topic'], 'error') and test['topic'].error:
                     self.indent_print('')
                     self.indent_print('{0.BLUE}{1.BRIGHT}Topic Error:{1.RESET_ALL}'.format(Fore, Style))
                     exc_type, exc_value, exc_traceback = test['topic'].error
@@ -231,7 +231,7 @@ class VowsDefaultReporter(object):
             self.print_context(context['name'], context)
 
         self.indent -= 1
-    
+
     #-------------------------------------------------------------------------
     #   Printing (Profile)
     #-------------------------------------------------------------------------
@@ -261,7 +261,7 @@ class VowsDefaultReporter(object):
                 ) + Style.RESET_ALL
 
             print
-    
+
     #-------------------------------------------------------------------------
     #   Printing (Coverage)
     #-------------------------------------------------------------------------
@@ -270,15 +270,15 @@ class VowsDefaultReporter(object):
         root   = etree.fromstring(xml)
         result['overall'] = float(root.attrib['line-rate']) * 100
         result['classes'] = []
-        
+
         for package in root.findall('.//package'):
             package_name = package.attrib['name']
             for klass in package.findall('.//class'):
                 result['classes'].append({
                     'name': '.'.join([package_name, klass.attrib['name']]),
                     'line_rate': float(klass.attrib['line-rate']) * 100,
-                    'uncovered_lines': [line.attrib['number'] 
-                                        for line in klass.find('lines') 
+                    'uncovered_lines': [line.attrib['number']
+                                        for line in klass.find('lines')
                                         if  line.attrib['hits'] == '0']
                 })
         return result
@@ -286,28 +286,28 @@ class VowsDefaultReporter(object):
     def print_coverage(self, xml, cover_threshold):
         write_blue_str  = '{BLUE}{0!s}{RESET}'
         write_white_str = '{WHITE}{0!s}{RESET}'
-        
+
         write_blue  = lambda msg: write_blue_str.format(
-                            msg, 
+                            msg,
                             BLUE  = Fore.BLUE       + Style.BRIGHT,
                             RESET = Style.RESET_ALL + Fore.RESET)
-        
+
         write_white = lambda msg: write_white_str.format(
                             msg,
                             WHITE = Fore.WHITE      + Style.BRIGHT,
                             RESET = Style.RESET_ALL + Fore.RESET)
-                            
+
 
         self.print_header('Code Coverage')
-        
+
         root         = self.parse_coverage_xml(xml)
         klasses      = sorted(root['classes'], key=lambda klass: klass['line_rate'])
         max_length   = max([len(klass['name']) for klass in root['classes']])
         max_coverage = 0
-        
+
         for klass in klasses:
             coverage = klass['line_rate']
-            
+
             if coverage < cover_threshold:
                 cover_character = self.BROKEN
             else:
@@ -322,12 +322,12 @@ class VowsDefaultReporter(object):
             progress = int(round(coverage / 100.0 * PROGRESS_SIZE, 0))
             offset   = coverage == 0 and 2 or (coverage < 10 and 1 or 0)
                         #   FIXME: explain the `offset` line please?  :)
-                        
+
             if coverage == 0 and not klass['uncovered_lines']:
                 continue
 
             print ' {0} {klass}{space1}\t{progress}{cover_pct}%{space2} {lines}'.format(
-                # TODO: 
+                # TODO:
                 #   * remove manual spacing, use .format() alignment
                 cover_character,
                 klass     = write_blue(klass['name']),
@@ -340,16 +340,16 @@ class VowsDefaultReporter(object):
                 lines     = self.get_uncovered_lines(klass['uncovered_lines']))
 
         print
-        
+
         total_coverage = root['overall']
         progress       = int(round(total_coverage / 100.0 * PROGRESS_SIZE, 0))
-        
+
         print ' {0} {overall}{space}\t{progress} {total}%'.format(
            (total_coverage >= cover_threshold) and self.HONORED or self.BROKEN,
-            overall = write_blue('OVERALL'),    
+            overall = write_blue('OVERALL'),
             space   = ' ' * (max_length - len('OVERALL')),
             progress= '•' * progress,
             total   = write_white('{0:.2%}'.format(total_coverage)))
 
-        print    
-    
+        print
+
